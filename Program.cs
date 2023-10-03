@@ -1,11 +1,11 @@
 using CocktailApi;
+using FastEndpoints;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 {
   builder.Services.AddMvc();
-
   builder.Services.AddAuthentication(options =>
   {
       options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -17,39 +17,42 @@ var builder = WebApplication.CreateBuilder(args);
   });
 
   builder.Services
-      .AddAuthorization(options =>
-      {
-          options.AddPolicy(
-            "delete:cocktail",
-            policy => policy.Requirements.Add(
-              new HasPermissionRequirement("delete:cocktail")
-            )
-          );
-      });
-
-  builder.Services.AddSingleton<IAuthorizationHandler, HasPermissionHandler>();
-
-  builder.Services.AddCors(options =>
-  {
-      options.AddPolicy(
-        name: "AllowLocalhost",
-        policy  =>
-        {
-            policy.WithOrigins("http://localhost:5173");
-            policy.AllowAnyHeader();
-            policy.AllowCredentials();
-        });
-  });
+    .AddAuthorization(options =>
+    {
+        options.AddPolicy("delete:cocktail",
+        policy => policy.Requirements.Add(new HasPermissionRequirement("delete:cocktail"))
+        );
+    })
+    .AddCors(options =>
+    {
+        options.AddPolicy(
+            name: "AllowLocalhost",
+            policy  =>
+            {
+                policy.WithOrigins("http://localhost:5173");
+                policy.AllowAnyHeader();
+                policy.AllowCredentials();
+            });
+    })
+    .AddSingleton<IAuthorizationHandler, HasPermissionHandler>()
+    .AddFastEndpoints()
+    .AddEndpointsApiExplorer()
+    .AddSwaggerGen();
 }
 
 var app = builder.Build();
 {
-  app.UseAuthentication();
-  app.UseAuthorization();
-  app.UseCors("AllowLocalhost");
-  app.MapGet("/", () => "Hello World!");
-  app.MapGet("/secret", () => new { Secret = "secret" }).RequireAuthorization();
-  app.MapGet("/supersecret", () => new { Secret = "super secret"}).RequireAuthorization("delete:cocktail");
+    app
+        .UseAuthentication()
+        .UseAuthorization()
+        .UseCors("AllowLocalhost")
+        .UseFastEndpoints();
+
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI();
+    }
 }
 
 app.Run();
