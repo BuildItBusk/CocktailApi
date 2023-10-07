@@ -4,7 +4,7 @@ using FastEndpoints.Swagger;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 
-internal class Program
+public class Program
 {
     private static void Main(string[] args)
     {
