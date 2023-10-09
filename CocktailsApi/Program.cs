@@ -1,15 +1,23 @@
-using CocktailApi;
 using FastEndpoints;
 using FastEndpoints.Swagger;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 
+namespace CocktailApi;
+
 public class Program
 {
     private static void Main(string[] args)
-    {
+    {   
+        var envVars = Environment.GetEnvironmentVariables();
+        var cosmosUri = Environment.GetEnvironmentVariable("Cosmos:Uri");
+        Console.WriteLine($"Cosmos:Uri={cosmosUri}");
+
         var builder = WebApplication.CreateBuilder(args);
         {
+            builder.Services.AddOptions();
+            builder.Services.Configure<CosmosDbOptions>(builder.Configuration.GetRequiredSection(CosmosDbOptions.SectionName));
+
             builder.Services.AddMvc();
             builder.Services.AddAuthentication(options =>
             {
