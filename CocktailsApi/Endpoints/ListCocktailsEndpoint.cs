@@ -1,10 +1,12 @@
-using CocktailApi.Contracts;
+using CocktailApi.Contracts.Responses;
 using FastEndpoints;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Linq;
 
 namespace CocktailApi.Endpoints;
 
+[HttpGet("/cocktails"), AllowAnonymous]
 public sealed class ListCocktailsEndpoint : EndpointWithoutRequest<List<CocktailResponse>>
 {
     private readonly CosmosClient _client;
@@ -12,12 +14,6 @@ public sealed class ListCocktailsEndpoint : EndpointWithoutRequest<List<Cocktail
     public ListCocktailsEndpoint(CosmosClient client)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
-    }
-
-    public override void Configure()
-    {
-        Get("/cocktails");
-        AllowAnonymous();
     }
 
     public override async Task HandleAsync(CancellationToken cancellationToken)
@@ -33,15 +29,16 @@ public sealed class ListCocktailsEndpoint : EndpointWithoutRequest<List<Cocktail
             foreach(var item in await iterator.ReadNextAsync(cancellationToken))
             {
                 cocktails.Add(new CocktailResponse(
-                    Name: item.Name,
-                    Ingredients: item.Ingredients.Select(i => new Ingredient(
-                        Name: i.Name,
-                        Quantity: i.Quantity,
-                        Unit: i.Unit
+                    Id: item.id,
+                    Name: item.name,
+                    Ingredients: item.ingredients.Select(i => new Ingredient(
+                        Name: i.name,
+                        Quantity: i.quantity,
+                        Unit: i.unit
                     )).ToList(),
-                    Recipe: item.Recipe,
-                    ImageUrl: new Uri("https://www.test.com/cocktail.jpg"),
-                    History: item.Story
+                    Recipe: item.recipe,
+                    ImageUrl: item.image,
+                    History: item.story
                 ));
             }
         }

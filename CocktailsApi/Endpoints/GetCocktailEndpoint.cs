@@ -1,39 +1,53 @@
-using CocktailApi.Contracts;
+using System.Net;
+using CocktailApi.Contracts.Requests;
+using CocktailApi.Contracts.Responses;
 using FastEndpoints;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.Azure.Cosmos;
 
 namespace CocktailApi.Endpoints;
 
-public sealed class GetCocktailEndpoint : Endpoint<CocktailRequest, CocktailResponse>
+[HttpGet("/cocktails/{id:Guid}"), AllowAnonymous]
+public sealed class GetCocktailEndpoint : Endpoint<GetCocktailRequest, CocktailResponse?>
 {
-    public override void Configure()
+    private readonly CosmosClient _client;
+
+    public GetCocktailEndpoint(CosmosClient client)
     {
-        Get("cocktails/{id}");
-        AllowAnonymous();
+        _client = client ?? throw new ArgumentNullException(nameof(client));
     }
 
-    public override async Task HandleAsync(CocktailRequest request, CancellationToken cancellationToken)
+    public override async Task HandleAsync(GetCocktailRequest request, CancellationToken cancellationToken)
     {
-        Console.WriteLine($"Getting cocktail with id {request.Id}");
+        var database = _client.GetDatabase("Cocktails");
+        var container = database.GetContainer("Recipes");
 
-        Response = new CocktailResponse(
-            "Margarita",
-            "A delicious cocktail",
-            new Uri("https://www.thecocktaildb.com/images/media/drink/5noda61589575158.jpg"),
-            "Mix it all together",
-            new List<Ingredient>
-            {
-                new("Tequila", 1, "oz"),
-                new("Lime juice", 1, "oz"),
-                new("Cointreau", 1, "oz"),
-                new("Salt", 1, "pinch")
-            }
-        );
+        try 
+        {
+            CocktailModel item = await container.ReadItemAsync<CocktailModel>(
+                id: request.Id.ToString(), 
+                partitionKey: new PartitionKey(request.Id.ToString()), 
+                cancellationToken: cancellationToken);
+            
+            var cocktail = new CocktailResponse(
+                Id: item.id,
+                Name: item.name,
+                Recipe: item.recipe,
+                History: item.story,
+                ImageUrl: item.image,
+                Ingredients: item.ingredients.Select(i => new Contracts.Responses.Ingredient(
+                    Name: i.name,
+                    Quantity: i.quantity,
+                    Unit: i.unit
+                )).ToList()
+            );
 
-        await Task.CompletedTask;
+            await SendAsync(cocktail, cancellation: cancellationToken);
+        }
+        catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            await SendNotFoundAsync(cancellationToken);
+            return;
+        }
     }
-}
-
-public class CocktailRequest
-{
-    public Guid Id { get; init; }
 }

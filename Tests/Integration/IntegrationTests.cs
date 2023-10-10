@@ -1,6 +1,6 @@
 using System.Text.Json;
 using CocktailApi;
-using CocktailApi.Contracts;
+using CocktailApi.Contracts.Responses;
 using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Tests.Integration;

@@ -1,4 +1,4 @@
-using CocktailApi.Contracts;
+using CocktailApi.Contracts.Requests;
 using CocktailApi.Validation;
 using FluentValidation.TestHelper;
 
@@ -6,11 +6,11 @@ namespace Tests;
 
 public class Validation
 {
-    private readonly UpsertCocktailValidator _validator;
+    private readonly CreateCocktailValidator _validator;
 
     public Validation()
     {
-        _validator = new UpsertCocktailValidator();
+        _validator = new CreateCocktailValidator();
     }
 
     [Fact]
@@ -25,10 +25,10 @@ public class Validation
             new("Club Soda", 2, "oz")
         };
 
-        var cocktail = new UpsertCocktailRequest(
+        var cocktail = new CreateCocktailRequest(
             "Mojito", 
             "Do stuff", 
-            new Uri("https://www.thecocktaildb.com/images/media/drink/3z6xdi1589574603.jpg"),
+            "https://www.thecocktaildb.com/images/media/drink/3z6xdi1589574603.jpg",
             "Something",
             ingredients);
 
@@ -45,10 +45,10 @@ public class Validation
             new("Rum", 1, "oz")
         };
 
-        var cocktail = new UpsertCocktailRequest(
+        var cocktail = new CreateCocktailRequest(
             "Mojito", 
             "Do stuff", 
-            new Uri("https://www.thecocktaildb.com/images/media/drink/3z6xdi1589574603.jpg"),
+            "https://www.thecocktaildb.com/images/media/drink/3z6xdi1589574603.jpg",
             "Something",
             ingredients);
 

@@ -1,17 +1,17 @@
 ﻿namespace CocktailApi;
 
 internal record CocktailModel(
-    string Id,
-    string Name,
-    List<IngredientModel> Ingredients,
-    string Recipe,
-    string Image,
-    string Story,
-    string Video
+    string id,
+    string name,
+    List<IngredientModel> ingredients,
+    string recipe,
+    string image,
+    string story,
+    string video
 );
 
 internal record IngredientModel(
-    string Name,
-    decimal Quantity,
-    string Unit
+    string name,
+    decimal quantity,
+    string unit
 );

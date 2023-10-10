@@ -1,13 +1,12 @@
-
-using CocktailApi.Contracts;
+using CocktailApi.Contracts.Requests;
 using FastEndpoints;
 using FluentValidation;
 
 namespace CocktailApi.Validation;
 
-public sealed class UpsertCocktailValidator : Validator<UpsertCocktailRequest>
+public sealed class CreateCocktailValidator : Validator<CreateCocktailRequest>
 {
-    public UpsertCocktailValidator()
+    public CreateCocktailValidator()
     {
         RuleFor(req => req.Name).NotEmpty();
         RuleFor(req => req.Recipe).NotEmpty();
@@ -27,8 +26,8 @@ public sealed class UpsertCocktailValidator : Validator<UpsertCocktailRequest>
         return enumerable != null && enumerable.Count() >= 2;
     }
 
-    private bool BeValidUri(Uri uri)
+    private bool BeValidUri(string uri)
     {
-        return Uri.TryCreate(uri.ToString(), UriKind.Absolute, out _);
+        return Uri.TryCreate(uri, UriKind.Absolute, out _);
     }
 }
