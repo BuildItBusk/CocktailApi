@@ -1,5 +1,4 @@
 using System.Net.Http.Json;
-using System.Net.NetworkInformation;
 using System.Text.Json;
 using CocktailApi;
 using CocktailApi.Contracts.Requests;
