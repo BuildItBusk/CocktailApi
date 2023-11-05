@@ -1,53 +1,49 @@
-using System.Net;
 using CocktailApi.Contracts.Requests;
 using CocktailApi.Contracts.Responses;
+using CocktailApi.Persistance;
+using CocktailApi.Persistance.Models;
 using FastEndpoints;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Azure.Cosmos;
+using Microsoft.EntityFrameworkCore;
 
 namespace CocktailApi.Endpoints;
 
 [HttpGet("/cocktails/{id:Guid}"), AllowAnonymous]
 public sealed class GetCocktailEndpoint : Endpoint<GetCocktailRequest, CocktailResponse?>
 {
-    private readonly CosmosClient _client;
+    private readonly CocktailsDb _db;
 
-    public GetCocktailEndpoint(CosmosClient client)
+    public GetCocktailEndpoint(CocktailsDb db)
     {
-        _client = client ?? throw new ArgumentNullException(nameof(client));
+        _db = db;
     }
 
     public override async Task HandleAsync(GetCocktailRequest request, CancellationToken cancellationToken)
     {
-        var database = _client.GetDatabase("Cocktails");
-        var container = database.GetContainer("Recipes");
-
-        try 
-        {
-            CocktailModel item = await container.ReadItemAsync<CocktailModel>(
-                id: request.Id.ToString(), 
-                partitionKey: new PartitionKey(request.Id.ToString()), 
-                cancellationToken: cancellationToken);
-            
-            var cocktail = new CocktailResponse(
-                Id: item.id,
-                Name: item.name,
-                Recipe: item.recipe,
-                History: item.story,
-                ImageUrl: item.image,
-                Ingredients: item.ingredients.Select(i => new Contracts.Responses.Ingredient(
-                    Name: i.name,
-                    Quantity: i.quantity,
-                    Unit: i.unit
-                )).ToList()
-            );
-
-            await SendAsync(cocktail, cancellation: cancellationToken);
-        }
-        catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        Cocktail? cocktail = await _db.Cocktails
+            .Where(c => c.Id == request.Id)
+            .Select(c => c)
+            .FirstOrDefaultAsync(cancellationToken);
+        
+        if (cocktail is null)
         {
             await SendNotFoundAsync(cancellationToken);
             return;
         }
+
+        var response = new CocktailResponse(
+            Id: cocktail.Id.ToString(),
+            Name: cocktail.Name,
+            Recipe: cocktail.Instructions,
+            History: "",
+            ImageUrl: cocktail.ImageUrl.ToString(),
+            Ingredients: cocktail.Ingredients.Select(i => new Contracts.Responses.Ingredient(
+                Name: i.Name,
+                Quantity: i.Quantity,
+                Unit: i.Unit
+            )).ToList()
+        );
+
+        await SendAsync(response, cancellation: cancellationToken);
     }
 }

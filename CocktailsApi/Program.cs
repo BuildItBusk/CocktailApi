@@ -1,9 +1,9 @@
-using Azure.Identity;
+using CocktailApi.Persistance;
 using FastEndpoints;
 using FastEndpoints.Swagger;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Azure.Cosmos;
+using Microsoft.EntityFrameworkCore;
 
 namespace CocktailApi;
 
@@ -26,15 +26,8 @@ public class Program
                 options.Audience = "https://www.dirtydrinking.com";
             });
 
-            builder.Services.AddSingleton<CosmosClient>(serviceProvider =>
-            {
-                var client = new CosmosClient(
-                    accountEndpoint: Environment.GetEnvironmentVariable("Cosmos:Uri"),
-                    tokenCredential: new DefaultAzureCredential()
-                );
-
-                return client;
-            });
+            builder.Services.AddDbContext<CocktailsDb>(opt => opt.UseInMemoryDatabase("CocktailsDb"));
+            builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
             builder.Services
               .AddAuthorization(options =>

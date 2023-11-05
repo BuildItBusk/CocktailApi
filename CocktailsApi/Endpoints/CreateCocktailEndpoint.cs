@@ -1,66 +1,40 @@
 using CocktailApi.Contracts.Requests;
+using CocktailApi.Persistance;
+using CocktailApi.Persistance.Models;
 using FastEndpoints;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Azure.Cosmos;
 
 namespace CocktailApi.Endpoints;
 
 [HttpPost("/cocktails"), AllowAnonymous]
 public sealed class CreateCocktailEndpoint : Endpoint<CreateCocktailRequest, CreateCocktailResponse> 
 {
-    private readonly CosmosClient _client;
+    private readonly CocktailsDb _db;
 
-    public CreateCocktailEndpoint(CosmosClient client)
+    public CreateCocktailEndpoint(CocktailsDb db)
     {
-        _client = client ?? throw new ArgumentNullException(nameof(client));
+        _db = db;
     }
     
     public override async Task HandleAsync(CreateCocktailRequest request, CancellationToken cancellationToken)
     {
-        Database database = _client.GetDatabase("Cocktails");
-        Container container = database.GetContainer("Recipes");
-        
-        if (await CocktailExists(container, request.Name))
+        var cocktail = new Cocktail 
         {
-            HttpContext.Response.StatusCode = StatusCodes.Status409Conflict;
-            await HttpContext.Response.WriteAsync($"A cocktail named '{request.Name}' already exists.", cancellationToken);
-            return;
-        }
+            Id = Guid.NewGuid(),
+            Name = request.Name,
+            Description = "",
+            Instructions = request.Recipe,
+            Ingredients = request.Ingredients.Select(i => new Persistance.Models.Ingredient {
+                Name = i.Name,
+                Quantity = i.Quantity,
+                Unit = i.Unit
+            }).ToList(),
+            ImageUrl =  new Uri(request.ImageUrl)
+        };
 
-        Guid Id = Guid.NewGuid();
-        var cocktail = new CocktailModel(
-            id: Id.ToString(),
-            name: request.Name,
-            ingredients: request.Ingredients.Select(i => new IngredientModel(
-                name: i.Name,
-                quantity: i.Quantity,
-                unit: i.Unit
-            )).ToList(),
-            recipe: request.Recipe,
-            image: request.ImageUrl.ToString(),
-            story: request.History,
-            video: string.Empty
-        );
+        await _db.AddAsync(cocktail, cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken);
 
-        await container.CreateItemAsync(
-            item: cocktail,
-            cancellationToken: cancellationToken);
-
-        await SendAsync(new CreateCocktailResponse(Id), cancellation: cancellationToken);
-    }
-
-    private static async Task<bool> CocktailExists(Container container, string cocktailName)
-    {
-        var query = new QueryDefinition("SELECT * FROM c WHERE c.name = @name")
-            .WithParameter("@name", cocktailName);
-
-        var iterator = container.GetItemQueryIterator<CocktailModel>(query);
-        if (iterator.HasMoreResults)
-        {
-            var response = await iterator.ReadNextAsync();            
-            return response.Any();
-        }
-
-        return false;
+        await SendAsync(new CreateCocktailResponse(cocktail.Id), cancellation: cancellationToken);
     }
 }

@@ -1,48 +1,37 @@
 using CocktailApi.Contracts.Responses;
+using CocktailApi.Persistance;
 using FastEndpoints;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Azure.Cosmos;
-using Microsoft.Azure.Cosmos.Linq;
+using Microsoft.EntityFrameworkCore;
 
 namespace CocktailApi.Endpoints;
 
 [HttpGet("/cocktails"), AllowAnonymous]
 public sealed class ListCocktailsEndpoint : EndpointWithoutRequest<List<CocktailResponse>>
 {
-    private readonly CosmosClient _client;
+    private readonly CocktailsDb _db;
 
-    public ListCocktailsEndpoint(CosmosClient client)
+    public ListCocktailsEndpoint(CocktailsDb db)
     {
-        _client = client ?? throw new ArgumentNullException(nameof(client));
+        _db = db;
     }
-
     public override async Task HandleAsync(CancellationToken cancellationToken)
     {
-        var database = _client.GetDatabase("Cocktails");
-        var recipeContainer = database.GetContainer("Recipes");
-        
-        var iterator = recipeContainer.GetItemLinqQueryable<CocktailModel>().ToFeedIterator();
+        var cocktails = await _db.Cocktails
+            .Include(c => c.Ingredients)
+            .ToListAsync(cancellationToken);
 
-        var cocktails = new List<CocktailResponse>();
-        while (iterator.HasMoreResults)
-        {
-            foreach(var item in await iterator.ReadNextAsync(cancellationToken))
-            {
-                cocktails.Add(new CocktailResponse(
-                    Id: item.id,
-                    Name: item.name,
-                    Ingredients: item.ingredients.Select(i => new Ingredient(
-                        Name: i.name,
-                        Quantity: i.quantity,
-                        Unit: i.unit
-                    )).ToList(),
-                    Recipe: item.recipe,
-                    ImageUrl: item.image,
-                    History: item.story
-                ));
-            }
-        }
-
-        Response = cocktails;
+        Response = cocktails.Select(c => new CocktailResponse(
+            Id: c.Id.ToString(),
+            Name: c.Name,
+            Recipe: c.Instructions,
+            History: "",
+            ImageUrl: c.ImageUrl.ToString(),
+            Ingredients: c.Ingredients.Select(i => new Ingredient(
+                Name: i.Name,
+                Quantity: i.Quantity,
+                Unit: i.Unit
+            )).ToList()
+        )).ToList();
     }
 }
