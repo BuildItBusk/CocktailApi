@@ -9,18 +9,14 @@ using Microsoft.EntityFrameworkCore;
 namespace CocktailApi.Endpoints;
 
 [HttpGet("/cocktails/{id:Guid}"), AllowAnonymous]
-public sealed class GetCocktailEndpoint : Endpoint<GetCocktailRequest, CocktailResponse?>
+public sealed class GetCocktailEndpoint(CocktailsDb db) : Endpoint<GetCocktailRequest, CocktailResponse?>
 {
-    private readonly CocktailsDb _db;
-
-    public GetCocktailEndpoint(CocktailsDb db)
-    {
-        _db = db;
-    }
+    private readonly CocktailsDb _db = db;
 
     public override async Task HandleAsync(GetCocktailRequest request, CancellationToken cancellationToken)
     {
         Cocktail? cocktail = await _db.Cocktails
+            .Include(c => c.Ingredients)
             .Where(c => c.Id == request.Id)
             .Select(c => c)
             .FirstOrDefaultAsync(cancellationToken);

@@ -2,7 +2,7 @@ using CocktailApi.Contracts.Requests;
 using CocktailApi.Validation;
 using FluentValidation.TestHelper;
 
-namespace Tests;
+namespace Tests.Unit;
 
 public class Validation
 {
